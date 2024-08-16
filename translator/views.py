@@ -2,9 +2,7 @@ from django.shortcuts import render
 from django.views import View
 from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
-
 import json, requests, time
-
 from . import models
 
 from environs import Env
@@ -50,7 +48,6 @@ def handleVAPIServerMessages(request):
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     
     return JsonResponse(request_data, status=200, safe=False)
-
 
 def trigger_agent(relevance_agent_id, user_content):   
     url = f"{REGION_SPECIFIC_RELEVANCE_BASE_URL}/agents/trigger"
