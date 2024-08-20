@@ -154,7 +154,7 @@ def chat_completions(request):
     relevance_agent_id = request_data.get('model')
     relevance_conversation_id = "1234"    
     
-    # persist relevance_agent_id to database   
+    # persist relevance information to database   
     conversation = models.Conversation(
         relevance_agent_id=relevance_agent_id,
         relevance_conversation_id = "1234"
