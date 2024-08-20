@@ -29,7 +29,10 @@ def handleVAPIServerMessages(request):
         request_data = json.loads(request.body)
 
         type_status = request_data.get('message').get('type')
-        if type_status == 'status-update':
+        if type_status == 'assistant-request':
+            print(f"VAPI Server Message Status: {type_status}" )
+            createTransientAssistant(request)
+        elif type_status == 'status-update':
             message_status = request_data.get('message').get('status')
             if message_status == 'in-progress':
                 # do some work at the start of the call
@@ -214,6 +217,69 @@ def chat_completions(request):
 
     return StreamingHttpResponse(generate(), content_type='text/event-stream')
 
+@csrf_exempt
+def createTransientAssistant(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)    
+    try:
+        # Assuming the POST data is sent as JSON
+        request_data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+    if request_data.get("message", {}).get("type") != "assistant-request":
+        # for now, ignore other server messages
+        pass
+        # return JsonResponse({'error': 'Endpoint only for assistant requests'}, status=404)
+    
+    # only allow requests from my phone numbers to continue    
+    vapi_phone_list = [
+        "95606d61-7ead-4836-847f-ae20dd869b33"        
+    ]
+
+    phone_number_id = request_data.get("message", {}).get("call", {}).get("phoneNumberId")
+    if phone_number_id not in vapi_phone_list:        
+        return JsonResponse({'error': 'Request Forbidden'}, status=403)      
+
+    # config INBOUND Transient Assistant
+    assistant_config = {
+            "assistant": {
+               
+                "transcriber": {
+                    "provider": "deepgram",
+                    "model": "nova-2",
+                    "language": "en"
+                },
+                "model": {
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Answer the callers questions as succintly as possible. Yes or no answers are completely acceptable when appropriate."
+                        }
+                    ],
+                    "provider": "custom-llm",
+                    "model": "a6fdacc8-cc99-4334-88a8-5d0d85e4be52",
+                    "url": "https://29e9-24-96-15-35.ngrok-free.app/",                   
+                    "maxTokens": 250
+                },
+                "voice": {
+                    "provider": "azure",
+                    "voiceId": "andrew",
+                    "speed": 1
+                },
+                "firstMessageMode": "assistant-speaks-first",
+                "hipaaEnabled": False,
+                "recordingEnabled": True,
+                "firstMessage": "Hey. Hi. Howdy.",
+                "voicemailDetection": {
+                    "provider": "twilio"
+                }
+            }
+        }    
+        
+    return JsonResponse(assistant_config, content_type='application/json')
 
    
     
